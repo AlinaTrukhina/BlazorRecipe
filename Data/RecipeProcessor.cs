@@ -22,7 +22,14 @@ namespace BlazorRecipe.Data
 
             using (HttpResponseMessage response = await ApiHelper.ApiClient.GetAsync(url))
             {
-                
+                if (response.IsSuccessStatusCode)
+                {
+
+                }
+                else 
+                {
+                    
+                }
             }
         }
     }

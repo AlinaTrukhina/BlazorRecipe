@@ -1,0 +1,72 @@
+@page "/spoonacular"
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@inject IHttpClientFactory ClientFactory
+
+<h1>Get Data from recipe API</h1>
+
+@if (getResultsError || recipes is null) 
+{
+    <p>Unable to get info from API</p>
+}
+else 
+{
+    <ul>
+        <li>Recipe titles go here</li>
+        @foreach (var item in recipes)
+        {
+            <li>@item.Title</li>
+        }
+    </ul>
+}
+
+@code {
+        private IEnumerable<APIRecipe>? recipes = Array.Empty<APIRecipe>();
+        private bool getResultsError;
+        private bool shouldRender;
+
+        protected override bool ShouldRender() => shouldRender;
+
+        protected override async Task OnInitializedAsync() {
+            var request = new HttpRequestMessage
+            {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri("https://api.spoonacular.com/recipes/findByIngredients?ingredients=apples%2Cflour%2Csugar&ranking=1&ignorePantry=true&number=5"),
+                    Headers =
+                    {
+                        { "x-api-key", "a151019d6e5041dbbee481ab3778e65b" }
+                    },
+            };
+
+            var client = ClientFactory.CreateClient();
+            @* var client = new HttpClient(); *@
+
+            var response = await client.SendAsync(request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                @* var body = await response.Content.ReadAsStringAsync();
+                Console.WriteLine(body); *@
+
+                using var responseStream = await response.Content.ReadAsStreamAsync();
+                recipes = await JsonSerializer.DeserializeAsync
+                <IEnumerable<APIRecipe>>(responseStream);
+            }
+                @* response.EnsureSuccessStatusCode(); *@
+            else
+            {
+                getResultsError = true;
+            }
+
+            shouldRender = true;
+            
+        }
+
+        public class APIRecipe
+        {
+            [JsonPropertyName("title")]
+            public string? Title { get; set; }
+
+        }
+}

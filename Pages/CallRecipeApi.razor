@@ -14,7 +14,7 @@ else
     <ul>
         @foreach (var item in recipes)
         {
-            <li>item.title</li>
+            <li>@item.Title</li>
         }
     </ul>
 }
@@ -29,8 +29,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         var request = new HttpRequestMessage(HttpMethod.Get, 
-        $"https://api.spoonacular.com/recipes/complexSearch?apiKey=a151019d6e5041dbbee481ab3778e65b&ingredients=apples");
-        
+        "https://api.spoonacular.com/recipes/complexSearch?apiKey=a151019d6e5041dbbee481ab3778e65b&ingredients=apples&instructionsRequired=true");
+
         var client = ClientFactory.CreateClient();
 
         var response = await client.SendAsync(request);
@@ -39,6 +39,7 @@ else
         {
             using var responseStream = await response.Content.ReadAsStreamAsync();
             recipes = await JsonSerializer.DeserializeAsync<IEnumerable<APIRecipe>>(responseStream);
+            Console.WriteLine(recipes);
         }
         else {
             getResultsError = true;
@@ -49,8 +50,10 @@ else
 
     public class APIRecipe
     {
-        [JsonPropertyName("results.title")]
-        public string? Name { get; set; }
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+
     }
 
+    
 }
