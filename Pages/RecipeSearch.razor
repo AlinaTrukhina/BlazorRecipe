@@ -1,10 +1,20 @@
-@page "/spoonacular"
+@page "/search-recipes"
 @using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text.Json.Serialization
 @inject IHttpClientFactory ClientFactory
 
+<PageTitle>Recipe Search</PageTitle>
+
 <h1>Get Data from recipe API</h1>
+
+<form class="recipeSearch">
+    <label>
+        Search by ingredient: 
+        <input type="text" name="searchIngredient">
+    </label>
+    <button type="submit">Submit</button>
+</form>
 
 @if (getResultsError || recipes is null) 
 {
@@ -12,13 +22,28 @@
 }
 else 
 {
-    <ul>
-        <li>Recipe titles go here</li>
-        @foreach (var item in recipes)
-        {
-            <li>@item.Title</li>
-        }
-    </ul>
+    <table>
+        <thead>
+            <tr>
+                <th>
+                    Title
+                </th>
+                <th>
+                    Photo
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in recipes)
+            {
+                <tr>
+                    <td>@item.Title</td>
+                    <td><img src=@item.Image alt=@item.Title></td>
+                    <td><a asp-page="recipe" asp-route-recipeId="@item.RecipeId"><button>Details</button></a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
 
 @code {
@@ -65,8 +90,14 @@ else
 
         public class APIRecipe
         {
+            [JsonPropertyName("id")]
+            public int? RecipeId { get; set; }
+
             [JsonPropertyName("title")]
             public string? Title { get; set; }
+
+            [JsonPropertyName("image")]
+            public string? Image { get; set; }
 
         }
 }
