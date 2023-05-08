@@ -1,28 +1,26 @@
 @page "/search-recipes"
+@using System.Linq
 @using System.Net.Http.Headers
 @using System.Text.Json
 @using System.Text.Json.Serialization
+@using Microsoft.Extensions.Logging
+@using System.Text.RegularExpressions 
+@inject ILogger<RecipeSearch> Logger
 @inject IHttpClientFactory ClientFactory
 
 <PageTitle>Recipe Search</PageTitle>
 
 <h1>Get Data from recipe API</h1>
 
-<form class="recipeSearch">
-    <label>
-        Search by ingredient: 
-        <input type="text" name="searchIngredient">
-    </label>
-    <button type="submit">Submit</button>
+<form action="" method="get" @onsubmit="SearchRecipes">
+    <label for="searchTerm">Ingredient:</label>
+    <input type="text" id="searchTerm" name="searchTerm" @bind-value="searchTerm" pattern="[a-zA-Z]+"/>
+    <button type="submit" @onclick="SearchRecipes">Search</button>
 </form>
 
-@if (getResultsError || recipes is null) 
+@if ( searchTerm != null && recipes.Count() != 0 )
 {
-    <p>Unable to get info from API</p>
-}
-else 
-{
-    <table>
+        <table>
         <thead>
             <tr>
                 <th>
@@ -45,59 +43,103 @@ else
         </tbody>
     </table>
 }
+else if ( recipes.Count() == 0 )
+{
+    <p>No results found</p>
+}
+else if ( !Regex.IsMatch(searchTerm, "^[a-zA-Z]+$") )
+{
+    <p>Please enter a search term containing only letters.</p>
+}
+else 
+{
+    <p>Please enter ingredient to search by</p>
+}
 
 @code {
-        private IEnumerable<APIRecipe>? recipes = Array.Empty<APIRecipe>();
-        private bool getResultsError;
-        private bool shouldRender;
+private IEnumerable<APIRecipe>? recipes = Array.Empty<APIRecipe>();
+private bool getResultsError;
+private bool shouldRender;
+private string? searchTerm;
 
-        protected override bool ShouldRender() => shouldRender;
+protected async Task SearchRecipes()
+{
+    Console.WriteLine(searchTerm);
 
-        protected override async Task OnInitializedAsync() {
-            var request = new HttpRequestMessage
+    var request = new HttpRequestMessage
+    {
+            Method = HttpMethod.Get,
+            RequestUri = new Uri($"https://api.spoonacular.com/recipes/findByIngredients?ingredients={searchTerm}&ranking=1&ignorePantry=true&number=5"),
+            Headers =
             {
-                    Method = HttpMethod.Get,
-                    RequestUri = new Uri("https://api.spoonacular.com/recipes/findByIngredients?ingredients=apples%2Cflour%2Csugar&ranking=1&ignorePantry=true&number=5"),
-                    Headers =
-                    {
-                        { "x-api-key", "a151019d6e5041dbbee481ab3778e65b" }
-                    },
-            };
+                { "x-api-key", "a151019d6e5041dbbee481ab3778e65b" }
+            },
+    };
 
-            var client = ClientFactory.CreateClient();
-            @* var client = new HttpClient(); *@
+    var client = ClientFactory.CreateClient();
 
-            var response = await client.SendAsync(request);
-            
-            if (response.IsSuccessStatusCode)
+    var response = await client.SendAsync(request);
+    
+    if (response.IsSuccessStatusCode)
+    {
+
+        using var responseStream = await response.Content.ReadAsStreamAsync();
+        recipes = await JsonSerializer.DeserializeAsync
+        <IEnumerable<APIRecipe>>(responseStream);
+        
+    }
+    else
+    {
+        getResultsError = true;
+    }
+
+    shouldRender = true;
+    
+}
+
+protected override bool ShouldRender() => shouldRender;
+
+@* protected override async Task OnInitializedAsync() {
+    var request = new HttpRequestMessage
+    {
+            Method = HttpMethod.Get,
+            RequestUri = new Uri("https://api.spoonacular.com/recipes/findByIngredients?ingredients=apples%2Cflour%2Csugar&ranking=1&ignorePantry=true&number=5"),
+            Headers =
             {
-                @* var body = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(body); *@
+                { "x-api-key", "a151019d6e5041dbbee481ab3778e65b" }
+            },
+    };
 
-                using var responseStream = await response.Content.ReadAsStreamAsync();
-                recipes = await JsonSerializer.DeserializeAsync
-                <IEnumerable<APIRecipe>>(responseStream);
-            }
-                @* response.EnsureSuccessStatusCode(); *@
-            else
-            {
-                getResultsError = true;
-            }
+    var client = ClientFactory.CreateClient();
 
-            shouldRender = true;
-            
-        }
+    var response = await client.SendAsync(request);
+    
+    if (response.IsSuccessStatusCode)
+    {
 
-        public class APIRecipe
-        {
-            [JsonPropertyName("id")]
-            public int? RecipeId { get; set; }
+        using var responseStream = await response.Content.ReadAsStreamAsync();
+        recipes = await JsonSerializer.DeserializeAsync
+        <IEnumerable<APIRecipe>>(responseStream);
+    }
+    else
+    {
+        getResultsError = true;
+    }
 
-            [JsonPropertyName("title")]
-            public string? Title { get; set; }
+    shouldRender = true;
+    
+} *@
 
-            [JsonPropertyName("image")]
-            public string? Image { get; set; }
+public class APIRecipe
+{
+    [JsonPropertyName("id")]
+    public int? RecipeId { get; set; }
 
-        }
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+
+    [JsonPropertyName("image")]
+    public string? Image { get; set; }
+
+}
 }
