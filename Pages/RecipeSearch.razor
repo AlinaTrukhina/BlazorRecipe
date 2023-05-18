@@ -37,7 +37,7 @@
                 <tr>
                     <td>@item.Title</td>
                     <td><img src=@item.Image alt=@item.Title></td>
-                    <td><a asp-page="recipe" asp-route-recipeId="@item.RecipeId"><button>Details</button></a></td>
+                    <td><a href="recipe-details/@item.Id"><button>Details</button></a></td>
                 </tr>
             }
         </tbody>
@@ -133,7 +133,7 @@ protected override bool ShouldRender() => shouldRender;
 public class APIRecipe
 {
     [JsonPropertyName("id")]
-    public int? RecipeId { get; set; }
+    public int? Id { get; set; }
 
     [JsonPropertyName("title")]
     public string? Title { get; set; }
