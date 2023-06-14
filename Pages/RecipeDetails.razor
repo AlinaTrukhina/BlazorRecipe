@@ -6,17 +6,19 @@
 @inject NavigationManager NavigationManager
 @inject HttpClient HttpClient
 
+<PageTitle>Recipe Details</PageTitle>
+
 <h1>Recipe Details</h1>
 
 @if (recipe != null)
 {
-    <h2>@recipe.Title</h2>
-    <p>@recipe.Instructions</p>
-    <h3>Ingredients:</h3>
+    @* <h2>@recipeSteps.Title</h2>
+    <p>@recipeSteps.Instructions</p> *@
+    <h3>Steps:</h3>
     <ul>
-        @foreach (var ingredient in recipe.Ingredients)
+        @foreach (var step in recipe?.Steps)
         {
-            <li>@ingredient</li>
+            <li>@step.Number : @step.Step</li>
         }
     </ul>
 }
@@ -26,29 +28,95 @@ else
 }
 
 @code {
-    private SpoonacularRecipe recipe;
 
-    [Parameter]
-    public int RecipeId { get; set; }
+[Parameter]
+public int RecipeId { get; set; }
 
-    protected override async Task OnInitializedAsync()
+private SpoonacularRecipe recipe;
+private IEnumerable<RecipeSteps>? recipeSteps = Array.Empty<RecipeSteps>();
+private bool getResultsError;
+private bool shouldRender;
+
+
+
+@* get API key *@
+protected string? SPOONACULAR_API_KEY { get; private set; }
+
+protected override void OnInitialized()
+{
+    base.OnInitialized();
+    DotNetEnv.Env.Load(); // Load environment variables from .env file
+
+    SPOONACULAR_API_KEY = DotNetEnv.Env.GetString("SPOONACULAR_API_KEY");
+
+   GetRecipeDetails();
+}
+@* end get API key *@
+
+
+protected async Task GetRecipeDetails()
+{
+    var request = new HttpRequestMessage
+    {
+        Method = HttpMethod.Get,
+        RequestUri = new Uri($"https://api.spoonacular.com/recipes/{RecipeId}/analyzedInstructions"),
+        Headers = 
         {
-            recipe = await GetRecipeDetails();
-        }
+            { "x-api-key", SPOONACULAR_API_KEY }
+        },
+    };
 
-        private async Task<SpoonacularRecipe> GetRecipeDetails()
-        {
-            var url = $"https://api.spoonacular.com/recipes/{RecipeId}/information?apiKey=YOUR_API_KEY";
-            var response = await HttpClient.GetAsync(url);
+    var response = await HttpClient.SendAsync(request);
 
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception($"Failed to retrieve recipe details for ID {RecipeId}: {response.ReasonPhrase}");
-            }
+    if (response.IsSuccessStatusCode)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(content);
 
-            var content = await response.Content.ReadAsStringAsync();
-            var recipeDetails = JsonSerializer.Deserialize<SpoonacularRecipe>(content);
+        var recipeDetails = JsonSerializer.Deserialize<RecipeSteps>(content);
+            Console.WriteLine(recipeDetails);
 
-            return recipeDetails;
-        }
+        @* trying some new things *@
+        var recipeSteps = JsonSerializer.Deserialize<List<SpoonacularRecipe>>(content);
+
+        recipe = recipeSteps.FirstOrDefault();
+        @* end trying some new things *@
+        
+
+        @* using var responseStream = await response.Content.ReadAsStreamAsync();
+        recipeSteps = await JsonSerializer.DeserializeAsync
+        <IEnumerable<RecipeSteps>>(responseStream);
+        Console.WriteLine(recipeSteps); *@
+    }
+    else
+    {
+        getResultsError = true;
+    }
+    shouldRender = true;
+}
+
+protected override bool ShouldRender() => shouldRender;
+    
+public class RecipeSteps 
+{
+    [JsonPropertyName("number")]
+    public int? Number { get; set; }
+
+    [JsonPropertyName("step")]
+    public string? Step { get; set; }
+}
+
+@* trying some new things *@
+public class RecipeStep
+{
+    public int Number { get; set; }
+    public string Step { get; set; }
+}
+
+public class SpoonacularRecipe
+{
+    public string Name { get; set; }
+    public List<RecipeStep> Steps { get; set; }
+}
+
 }

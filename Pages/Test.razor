@@ -1,0 +1,245 @@
+@page "/recipe/{RecipeId:int}"
+@using Newtonsoft.Json;
+@using System.Text.Json;
+@using System.Text.Json.Serialization;
+@inject NavigationManager NavigationManager
+@inject HttpClient HttpClient
+
+<h3>Recipe Details</h3>
+
+@if (Steps != null)
+{
+    <ol>
+        @foreach (var step in Steps)
+        {
+            <li>@step.Step</li>
+        }
+    </ol>
+}
+else
+{
+    <p>No steps found.</p>
+}
+
+@code {
+
+[Parameter]
+public int RecipeId { get; set; }
+
+private RecipeStepsContainer Recipe { get; set; }
+private RecipeStep[] Steps => Recipe?.Steps;
+@* private RecipeStep[] Steps { get; set; } *@
+
+private string? content;
+
+private bool getResultsError;
+private bool shouldRender;
+
+@* get API key *@
+protected string? SPOONACULAR_API_KEY { get; private set; }
+
+protected async override void OnInitialized()
+{
+    base.OnInitialized();
+    DotNetEnv.Env.Load(); // Load environment variables from .env file
+
+    SPOONACULAR_API_KEY = DotNetEnv.Env.GetString("SPOONACULAR_API_KEY");
+
+   await GetRecipeDetails();
+}
+@* end get API key *@
+
+        @* string json = @"[{
+            ""name"": """",
+            ""steps"": [
+                {
+                    ""number"": 1,
+                    ""step"": ""Preheat your oven to 450F."",
+                    ""ingredients"": [],
+                    ""equipment"": [
+                        {
+                            ""id"": 404784,
+                            ""name"": ""oven"",
+                            ""localizedName"": ""oven"",
+                            ""image"": ""oven.jpg"",
+                            ""temperature"": {
+                                ""number"": 450.0,
+                                ""unit"": ""Fahrenheit""
+                            }
+                        }
+                    ]
+                },
+                {
+                    ""number"": 2,
+                    ""step"": ""Mix goat cheese, parmesan cheese and basil in a small bowl."",
+                    ""ingredients"": [
+                        {
+                            ""id"": 1033,
+                            ""name"": ""parmesan"",
+                            ""localizedName"": ""parmesan"",
+                            ""image"": ""parmesan.jpg""
+                        },
+                        {
+                            ""id"": 1159,
+                            ""name"": ""goat cheese"",
+                            ""localizedName"": ""goat cheese"",
+                            ""image"": ""goat-cheese.jpg""
+                        },
+                        {
+                            ""id"": 2044,
+                            ""name"": ""basil"",
+                            ""localizedName"": ""basil"",
+                            ""image"": ""basil.jpg""
+                        }
+                    ],
+                    ""equipment"": [
+                        {
+                            ""id"": 404783,
+                            ""name"": ""bowl"",
+                            ""localizedName"": ""bowl"",
+                            ""image"": ""bowl.jpg""
+                        }
+                    ]
+                },
+                {
+                    ""number"": 3,
+                    ""step"": ""Cut tomatoes in half, drizzle each half with olive oil and sprinkle with salt & pepper."",
+                    ""ingredients"": [
+                        {
+                            ""id"": 1102047,
+                            ""name"": ""salt and pepper"",
+                            ""localizedName"": ""salt and pepper"",
+                            ""image"": ""salt-and-pepper.jpg""
+                        },
+                        {
+                            ""id"": 4053,
+                            ""name"": ""olive oil"",
+                            ""localizedName"": ""olive oil"",
+                            ""image"": ""olive-oil.jpg""
+                        },
+                        {
+                            ""id"": 11529,
+                            ""name"": ""tomato"",
+                            ""localizedName"": ""tomato"",
+                            ""image"": ""tomato.png""
+                        }
+                    ],
+                    ""equipment"": []
+                },
+                {
+                    ""number"": 4,
+                    ""step"": ""Top each tomato half with the cheese mix, equally dividing the mixture between the four halves."",
+                    ""ingredients"": [
+                        {
+                            ""id"": 1041009,
+                            ""name"": ""cheese"",
+                            ""localizedName"": ""cheese"",
+                            ""image"": ""cheddar-cheese.png""
+                        },
+                        {
+                            ""id"": 11529,
+                            ""name"": ""tomato"",
+                            ""localizedName"": ""tomato"",
+                            ""image"": ""tomato.png""
+                        }
+                    ],
+                    ""equipment"": []
+                },
+                {
+                    ""number"": 5,
+                    ""step"": ""Bake the tomatoes for about 20 minutes, or until softened and slightly browned."",
+                    ""ingredients"": [
+                        {
+                            ""id"": 11529,
+                            ""name"": ""tomato"",
+                            ""localizedName"": ""tomato"",
+                            ""image"": ""tomato.png""
+                        }
+                    ],
+                    ""equipment"": [
+                        {
+                            ""id"": 404784,
+                            ""name"": ""oven"",
+                            ""localizedName"": ""oven"",
+                            ""image"": ""oven.jpg""
+                        }
+                    ],
+                    ""length"": {
+                        ""number"": 20,
+                        ""unit"": ""minutes""
+                    }
+                },
+                {
+                    ""number"": 6,
+                    ""step"": ""Serve hot or at room temperature."",
+                    ""ingredients"": [],
+                    ""equipment"": []
+                }
+            ]
+        }]";  *@
+
+        @* Steps = JsonConvert.DeserializeObject<RecipeStep[]>(json);
+            Console.WriteLine(Steps); *@
+
+        @* var recipeArray = JsonConvert.DeserializeObject<RecipeStep[]>(json);
+            Console.WriteLine(recipeArray);
+        Steps = recipeArray[0].Steps; *@
+
+    protected async Task GetRecipeDetails()
+    {
+        var request = new HttpRequestMessage
+        {
+            Method = HttpMethod.Get,
+            RequestUri = new Uri($"https://api.spoonacular.com/recipes/{RecipeId}/analyzedInstructions"),
+            Headers = 
+            {
+                { "x-api-key", SPOONACULAR_API_KEY }
+            },
+        };
+
+        var response = await HttpClient.SendAsync(request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            content = await response.Content.ReadAsStringAsync();
+                Console.WriteLine(content);
+
+            ConvertToRecipe();                
+        }
+        else
+        {
+            getResultsError = true;
+        }
+        shouldRender = true;
+    
+    }
+
+    protected void ConvertToRecipe()
+    {
+        if (content != null)
+        {
+            Recipe = JsonConvert.DeserializeObject<RecipeStepsContainer[]>(content).FirstOrDefault();
+        }
+        
+    }
+
+    public class RecipeStep
+    {
+        @* [JsonPropertyName("number")]
+        public string? Number { get; set; }
+
+        [JsonPropertyName("step")]
+        public string? Step { get; set; } *@
+
+        public int Number { get; set; }
+        public string Step { get; set; }
+    }
+
+    public class RecipeStepsContainer
+    {
+        public string Name { get; set; }
+        public RecipeStep[] Steps { get; set; }
+    }
+
+
+}

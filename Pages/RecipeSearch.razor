@@ -1,4 +1,6 @@
 @page "/search-recipes"
+@using System;
+@using System.IO;
 @using System.Linq
 @using System.Net.Http.Headers
 @using System.Text.Json
@@ -37,7 +39,7 @@
                 <tr>
                     <td>@item.Title</td>
                     <td><img src=@item.Image alt=@item.Title></td>
-                    <td><a href="recipe-details/@item.Id"><button>Details</button></a></td>
+                    <td><a href="recipe/@item.Id"><button>Details</button></a></td>
                 </tr>
             }
         </tbody>
@@ -62,6 +64,16 @@ private bool getResultsError;
 private bool shouldRender;
 private string? searchTerm;
 
+protected string? SPOONACULAR_API_KEY { get; private set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        DotNetEnv.Env.Load(); // Load environment variables from .env file
+
+        SPOONACULAR_API_KEY = DotNetEnv.Env.GetString("SPOONACULAR_API_KEY");
+    }
+
 protected async Task SearchRecipes()
 {
     Console.WriteLine(searchTerm);
@@ -72,7 +84,7 @@ protected async Task SearchRecipes()
             RequestUri = new Uri($"https://api.spoonacular.com/recipes/findByIngredients?ingredients={searchTerm}&ranking=1&ignorePantry=true&number=5"),
             Headers =
             {
-                { "x-api-key", "a151019d6e5041dbbee481ab3778e65b" }
+                { "x-api-key", SPOONACULAR_API_KEY }
             },
     };
 

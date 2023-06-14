@@ -1,0 +1,176 @@
+@page "/recipedetails/{RecipeId:int}"
+@inject HttpClient HttpClient
+@using Newtonsoft.Json;
+@using System.IO;
+@using System.Text.Json
+@using System.Text.Json.Serialization
+
+<h3>Recipe Instructions</h3>
+
+@if (Steps == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <ol>
+        @foreach (var step in Steps)
+        {
+            <li>@step.StepText</li>
+        }
+    </ol>
+}
+
+@code {
+
+[Parameter]
+public int RecipeId { get; set; }
+
+protected string? SPOONACULAR_API_KEY { get; private set; }
+
+@* private string? steps; *@
+
+@* private List<RecipeStep> Steps { get; set; } *@
+private RecipeStep[] Steps { get; set; }
+
+
+protected override async Task OnInitializedAsync()
+{
+
+    var request = new HttpRequestMessage
+    {
+        Method = HttpMethod.Get,
+        RequestUri = new Uri($"https://api.spoonacular.com/recipes/{RecipeId}/analyzedInstructions"),
+        Headers = 
+        {
+            { "x-api-key", "a151019d6e5041dbbee481ab3778e65b" }
+        },
+    };
+
+    var response = await HttpClient.SendAsync(request);
+
+    if (response.IsSuccessStatusCode)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+            @* Console.WriteLine(content); *@
+            @* Console.WriteLine(content[0]); *@
+
+        Steps = JsonConvert.DeserializeObject<RecipeStep[]>(json);
+        foreach (var step in Steps) {
+            Console.WriteLine(step.StepText);
+        }     
+
+    }
+    else
+    {
+        // Handle the case where the API response doesn't contain the expected data
+        Console.WriteLine("Error: Invalid API response format.");
+    }
+    
+}
+
+public class RecipeStep
+{
+    public int Number { get; set; }
+    public string StepText { get; set; }
+}
+
+
+    private string json = @"[{
+        ""name"": """",
+        ""steps"": [
+            {
+                ""number"": 1,
+                ""step"": ""Preheat your oven to 450F."",
+                ""ingredients"": [],
+                ""equipment"": [
+                    {
+                        ""id"": 404784,
+                        ""name"": ""oven"",
+                        ""localizedName"": ""oven"",
+                        ""image"": ""oven.jpg"",
+                        ""temperature"": {
+                            ""number"": 450.0,
+                            ""unit"": ""Fahrenheit""
+                        }
+                    }
+                ]
+            },
+            {
+                ""number"": 2,
+                ""step"": ""Mix goat cheese, parmesan cheese and basil in a small bowl."",
+                ""ingredients"": [
+                    {
+                        ""id"": 1033,
+                        ""name"": ""parmesan"",
+                        ""localizedName"": ""parmesan"",
+                        ""image"": ""parmesan.jpg""
+                    },
+                    {
+                        ""id"": 1159,
+                        ""name"": ""goat cheese"",
+                        ""localizedName"": ""goat cheese"",
+                        ""image"": ""goat-cheese.jpg""
+                    },
+                    {
+                        ""id"": 2044,
+                        ""name"": ""basil"",
+                        ""localizedName"": ""basil"",
+                        ""image"": ""basil.jpg""
+                    }
+                ],
+                ""equipment"": [
+                    {
+                        ""id"": 404783,
+                        ""name"": ""bowl"",
+                        ""localizedName"": ""bowl"",
+                        ""image"": ""bowl.jpg""
+                    }
+                ]
+            },
+            {
+                ""number"": 3,
+                ""step"": ""Cut tomatoes in half, drizzle each half with olive oil and sprinkle with salt & pepper."",
+                ""ingredients"": [
+                    {
+                        ""id"": 1102047,
+                        ""name"": ""salt and pepper"",
+                        ""localizedName"": ""salt and pepper"",
+                        ""image"": ""salt-and-pepper.jpg""
+                    },
+                    {
+                        ""id"": 4053,
+                        ""name"": ""olive oil"",
+                        ""localizedName"": ""olive oil"",
+                        ""image"": ""olive-oil.jpg""
+                    },
+                    {
+                        ""id"": 11529,
+                        ""name"": ""tomato"",
+                        ""localizedName"": ""tomato"",
+                        ""image"": ""tomato.png""
+                    }
+                ],
+                ""equipment"": []
+            },
+            {
+                ""number"": 4,
+                ""step"": ""Top each tomato half with the cheese mix, equally dividing the mixture between the four halves."",
+                ""ingredients"": [
+                    {
+                        ""id"": 1041009,
+                        ""name"": ""cheese"",
+                        ""localizedName"": ""cheese"",
+                        ""image"": ""cheddar-cheese.png""
+                    },
+                    {
+                        ""id"": 11529,
+                        ""name"": ""tomato"",
+                        ""localizedName"": ""tomato"",
+                        ""image"": ""tomato.png""
+                    }
+                ],
+                ""equipment"": []
+            }]}]";
+
+}
