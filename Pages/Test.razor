@@ -1,5 +1,4 @@
 @page "/recipe/{RecipeId:int}"
-@* @using Newtonsoft.Json; *@
 @using System.IO;
 @using System.Text;
 @using System.Text.Json;
@@ -31,8 +30,6 @@ else
 
     private bool isLoading = true;
 
-    @* private RecipeStepsContainer Recipe { get; set; }
-    private RecipeStep[] Steps => Recipe?.Steps; *@
     private List<RecipeStep> Steps { get; set; }
 
     private string? content;
@@ -44,29 +41,15 @@ else
     @* get API key *@
     protected string? SPOONACULAR_API_KEY { get; private set; }
 
-    protected async override void OnInitialized()
+    protected async override Task OnInitializedAsync()
     {
         base.OnInitialized();
         DotNetEnv.Env.Load(); // Load environment variables from .env file
 
         SPOONACULAR_API_KEY = DotNetEnv.Env.GetString("SPOONACULAR_API_KEY");
         @* end get API key *@
+    
 
-        await GetRecipeDetails();
-        await DeserializeJsonAsync();
-        isLoading = false;
-        @* await ConvertToRecipe(); *@
-    }
-
-        @* Steps = JsonConvert.DeserializeObject<RecipeStep[]>(json);
-            Console.WriteLine(Steps); *@
-
-        @* var recipeArray = JsonConvert.DeserializeObject<RecipeStep[]>(json);
-            Console.WriteLine(recipeArray);
-        Steps = recipeArray[0].Steps; *@
-
-    protected async Task GetRecipeDetails()
-    {
         var request = new HttpRequestMessage
         {
             Method = HttpMethod.Get,
@@ -82,14 +65,20 @@ else
         if (response.IsSuccessStatusCode)
         {
             content = await response.Content.ReadAsStringAsync();
-                @* Console.WriteLine(content); *@
-                var modContent = content.Remove(0, 20);
-                int i = modContent.Length - 3;
-                modContent1 = modContent.Remove(i,2);
-                Console.WriteLine(modContent1);
+                Console.WriteLine("modified content:");
+                Console.WriteLine(content);
+                Console.WriteLine(content.Length);
+            string modifiedContent = content.Remove(content.Length - 3, 2).Substring(20);
+            Console.WriteLine("modified content:");
+            Console.WriteLine(modifiedContent);
+            
+            using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(modifiedContent)))
+            {
+                Steps = await JsonSerializer.DeserializeAsync<List<RecipeStep>>(memoryStream);
+            }
 
-            Steps = await DeserializeJsonAsync();
-            @* JsonConvert.DeserializeObject<List<RecipeStep>>(modContent1); *@ 
+            isLoading = false;
+
         }
         else
         {
@@ -98,26 +87,16 @@ else
         
     }
 
-    protected async Task<List<RecipeStep>> DeserializeJsonAsync()
-    {
-        using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(modContent1)))
-        {
-            return await JsonSerializer.DeserializeAsync<List<RecipeStep>>(memoryStream);
-        }
-        StateHasChanged();
-    }
-
-
     public class RecipeStep
     {
         @* [JsonPropertyName("number")]
-        public string? Number { get; set; }
+        public int? Number { get; set; } *@
 
         [JsonPropertyName("step")]
-        public string? Step { get; set; } *@
+        public string? Step { get; set; }
 
-        public int Number { get; set; }
-        public string Step { get; set; }
+        @* public int Number { get; set; }
+        public string Step { get; set; } *@
     }
 
     public class RecipeStepsContainer
@@ -125,6 +104,5 @@ else
         public string Name { get; set; }
         public RecipeStep[] Steps { get; set; }
     }
-
 
 }
