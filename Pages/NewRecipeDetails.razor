@@ -33,6 +33,13 @@ protected string? SPOONACULAR_API_KEY { get; private set; }
 @* private List<RecipeStep> Steps { get; set; } *@
 private RecipeStep[] Steps { get; set; }
 
+protected override void OnInitialized()
+{
+    base.OnInitialized();
+    DotNetEnv.Env.Load(); // Load environment variables from .env file
+
+    SPOONACULAR_API_KEY = DotNetEnv.Env.GetString("SPOONACULAR_API_KEY");
+}
 
 protected override async Task OnInitializedAsync()
 {
@@ -57,7 +64,7 @@ protected override async Task OnInitializedAsync()
 
         Steps = JsonConvert.DeserializeObject<RecipeStep[]>(json);
         foreach (var step in Steps) {
-            Console.WriteLine(step.StepText);
+            @* Console.WriteLine(step); *@
         }     
 
     }

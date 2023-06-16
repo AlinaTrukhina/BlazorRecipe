@@ -1,5 +1,7 @@
 @page "/recipe/{RecipeId:int}"
-@using Newtonsoft.Json;
+@* @using Newtonsoft.Json; *@
+@using System.IO;
+@using System.Text;
 @using System.Text.Json;
 @using System.Text.Json.Serialization;
 @inject NavigationManager NavigationManager
@@ -7,7 +9,11 @@
 
 <h3>Recipe Details</h3>
 
-@if (Steps != null)
+@if (isLoading) 
+{
+    <p>Loading...</p>
+}
+else
 {
     <ol>
         @foreach (var step in Steps)
@@ -16,167 +22,41 @@
         }
     </ol>
 }
-else
-{
-    <p>No steps found.</p>
-}
+
 
 @code {
 
-[Parameter]
-public int RecipeId { get; set; }
+    [Parameter]
+    public int RecipeId { get; set; }
 
-private RecipeStepsContainer Recipe { get; set; }
-private RecipeStep[] Steps => Recipe?.Steps;
-@* private RecipeStep[] Steps { get; set; } *@
+    private bool isLoading = true;
 
-private string? content;
+    @* private RecipeStepsContainer Recipe { get; set; }
+    private RecipeStep[] Steps => Recipe?.Steps; *@
+    private List<RecipeStep> Steps { get; set; }
 
-private bool getResultsError;
-private bool shouldRender;
+    private string? content;
+    private string? modContent1;
 
-@* get API key *@
-protected string? SPOONACULAR_API_KEY { get; private set; }
+    private bool getResultsError;
+    private bool shouldRender;
 
-protected async override void OnInitialized()
-{
-    base.OnInitialized();
-    DotNetEnv.Env.Load(); // Load environment variables from .env file
+    @* get API key *@
+    protected string? SPOONACULAR_API_KEY { get; private set; }
 
-    SPOONACULAR_API_KEY = DotNetEnv.Env.GetString("SPOONACULAR_API_KEY");
+    protected async override void OnInitialized()
+    {
+        base.OnInitialized();
+        DotNetEnv.Env.Load(); // Load environment variables from .env file
 
-   await GetRecipeDetails();
-}
-@* end get API key *@
+        SPOONACULAR_API_KEY = DotNetEnv.Env.GetString("SPOONACULAR_API_KEY");
+        @* end get API key *@
 
-        @* string json = @"[{
-            ""name"": """",
-            ""steps"": [
-                {
-                    ""number"": 1,
-                    ""step"": ""Preheat your oven to 450F."",
-                    ""ingredients"": [],
-                    ""equipment"": [
-                        {
-                            ""id"": 404784,
-                            ""name"": ""oven"",
-                            ""localizedName"": ""oven"",
-                            ""image"": ""oven.jpg"",
-                            ""temperature"": {
-                                ""number"": 450.0,
-                                ""unit"": ""Fahrenheit""
-                            }
-                        }
-                    ]
-                },
-                {
-                    ""number"": 2,
-                    ""step"": ""Mix goat cheese, parmesan cheese and basil in a small bowl."",
-                    ""ingredients"": [
-                        {
-                            ""id"": 1033,
-                            ""name"": ""parmesan"",
-                            ""localizedName"": ""parmesan"",
-                            ""image"": ""parmesan.jpg""
-                        },
-                        {
-                            ""id"": 1159,
-                            ""name"": ""goat cheese"",
-                            ""localizedName"": ""goat cheese"",
-                            ""image"": ""goat-cheese.jpg""
-                        },
-                        {
-                            ""id"": 2044,
-                            ""name"": ""basil"",
-                            ""localizedName"": ""basil"",
-                            ""image"": ""basil.jpg""
-                        }
-                    ],
-                    ""equipment"": [
-                        {
-                            ""id"": 404783,
-                            ""name"": ""bowl"",
-                            ""localizedName"": ""bowl"",
-                            ""image"": ""bowl.jpg""
-                        }
-                    ]
-                },
-                {
-                    ""number"": 3,
-                    ""step"": ""Cut tomatoes in half, drizzle each half with olive oil and sprinkle with salt & pepper."",
-                    ""ingredients"": [
-                        {
-                            ""id"": 1102047,
-                            ""name"": ""salt and pepper"",
-                            ""localizedName"": ""salt and pepper"",
-                            ""image"": ""salt-and-pepper.jpg""
-                        },
-                        {
-                            ""id"": 4053,
-                            ""name"": ""olive oil"",
-                            ""localizedName"": ""olive oil"",
-                            ""image"": ""olive-oil.jpg""
-                        },
-                        {
-                            ""id"": 11529,
-                            ""name"": ""tomato"",
-                            ""localizedName"": ""tomato"",
-                            ""image"": ""tomato.png""
-                        }
-                    ],
-                    ""equipment"": []
-                },
-                {
-                    ""number"": 4,
-                    ""step"": ""Top each tomato half with the cheese mix, equally dividing the mixture between the four halves."",
-                    ""ingredients"": [
-                        {
-                            ""id"": 1041009,
-                            ""name"": ""cheese"",
-                            ""localizedName"": ""cheese"",
-                            ""image"": ""cheddar-cheese.png""
-                        },
-                        {
-                            ""id"": 11529,
-                            ""name"": ""tomato"",
-                            ""localizedName"": ""tomato"",
-                            ""image"": ""tomato.png""
-                        }
-                    ],
-                    ""equipment"": []
-                },
-                {
-                    ""number"": 5,
-                    ""step"": ""Bake the tomatoes for about 20 minutes, or until softened and slightly browned."",
-                    ""ingredients"": [
-                        {
-                            ""id"": 11529,
-                            ""name"": ""tomato"",
-                            ""localizedName"": ""tomato"",
-                            ""image"": ""tomato.png""
-                        }
-                    ],
-                    ""equipment"": [
-                        {
-                            ""id"": 404784,
-                            ""name"": ""oven"",
-                            ""localizedName"": ""oven"",
-                            ""image"": ""oven.jpg""
-                        }
-                    ],
-                    ""length"": {
-                        ""number"": 20,
-                        ""unit"": ""minutes""
-                    }
-                },
-                {
-                    ""number"": 6,
-                    ""step"": ""Serve hot or at room temperature."",
-                    ""ingredients"": [],
-                    ""equipment"": []
-                }
-            ]
-        }]";  *@
+        await GetRecipeDetails();
+        await DeserializeJsonAsync();
+        isLoading = false;
+        @* await ConvertToRecipe(); *@
+    }
 
         @* Steps = JsonConvert.DeserializeObject<RecipeStep[]>(json);
             Console.WriteLine(Steps); *@
@@ -202,26 +82,31 @@ protected async override void OnInitialized()
         if (response.IsSuccessStatusCode)
         {
             content = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(content);
+                @* Console.WriteLine(content); *@
+                var modContent = content.Remove(0, 20);
+                int i = modContent.Length - 3;
+                modContent1 = modContent.Remove(i,2);
+                Console.WriteLine(modContent1);
 
-            ConvertToRecipe();                
+            Steps = await DeserializeJsonAsync();
+            @* JsonConvert.DeserializeObject<List<RecipeStep>>(modContent1); *@ 
         }
         else
         {
             getResultsError = true;
         }
-        shouldRender = true;
-    
-    }
-
-    protected void ConvertToRecipe()
-    {
-        if (content != null)
-        {
-            Recipe = JsonConvert.DeserializeObject<RecipeStepsContainer[]>(content).FirstOrDefault();
-        }
         
     }
+
+    protected async Task<List<RecipeStep>> DeserializeJsonAsync()
+    {
+        using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(modContent1)))
+        {
+            return await JsonSerializer.DeserializeAsync<List<RecipeStep>>(memoryStream);
+        }
+        StateHasChanged();
+    }
+
 
     public class RecipeStep
     {
