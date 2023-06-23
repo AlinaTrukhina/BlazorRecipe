@@ -1,122 +1,108 @@
-@page "/recipe-details/{RecipeId:int}"
-@using BlazorRecipe.Models
-@using BlazorRecipe.Services
-@using System.Text.Json
-@using System.Text.Json.Serialization
+@page "/recipe/{RecipeId:int}"
+@using System.IO;
+@using System.Text;
+@using System.Text.Json;
+@using System.Text.Json.Serialization;
 @inject NavigationManager NavigationManager
 @inject HttpClient HttpClient
 
-<PageTitle>Recipe Details</PageTitle>
+<h3>Recipe Details</h3>
 
-<h1>Recipe Details</h1>
-
-@if (recipe != null)
+@if (isLoading) 
 {
-    @* <h2>@recipeSteps.Title</h2>
-    <p>@recipeSteps.Instructions</p> *@
-    <h3>Steps:</h3>
-    <ul>
-        @foreach (var step in recipe?.Steps)
-        {
-            <li>@step.Number : @step.Step</li>
-        }
-    </ul>
+    <p>Loading...</p>
 }
 else
 {
-    <p>Recipe not found.</p>
+    <ol>
+        @foreach (var step in Steps)
+        {
+            <li>@step.Step</li>
+        }
+    </ol>
 }
+
 
 @code {
 
-[Parameter]
-public int RecipeId { get; set; }
+    [Parameter]
+    public int RecipeId { get; set; }
 
-private SpoonacularRecipe recipe;
-private IEnumerable<RecipeSteps>? recipeSteps = Array.Empty<RecipeSteps>();
-private bool getResultsError;
-private bool shouldRender;
+    private bool isLoading = true;
 
+    private List<RecipeStep> Steps { get; set; }
 
+    private string? content;
+    private string? modContent1;
 
-@* get API key *@
-protected string? SPOONACULAR_API_KEY { get; private set; }
+    private bool getResultsError;
+    private bool shouldRender;
 
-protected override void OnInitialized()
-{
-    base.OnInitialized();
-    DotNetEnv.Env.Load(); // Load environment variables from .env file
+    @* get API key *@
+    protected string? SPOONACULAR_API_KEY { get; private set; }
 
-    SPOONACULAR_API_KEY = DotNetEnv.Env.GetString("SPOONACULAR_API_KEY");
-
-   GetRecipeDetails();
-}
-@* end get API key *@
-
-
-protected async Task GetRecipeDetails()
-{
-    var request = new HttpRequestMessage
+    protected async override Task OnInitializedAsync()
     {
-        Method = HttpMethod.Get,
-        RequestUri = new Uri($"https://api.spoonacular.com/recipes/{RecipeId}/analyzedInstructions"),
-        Headers = 
-        {
-            { "x-api-key", SPOONACULAR_API_KEY }
-        },
-    };
+        base.OnInitialized();
+        DotNetEnv.Env.Load(); // Load environment variables from .env file
 
-    var response = await HttpClient.SendAsync(request);
-
-    if (response.IsSuccessStatusCode)
-    {
-        var content = await response.Content.ReadAsStringAsync();
-            Console.WriteLine(content);
-
-        var recipeDetails = JsonSerializer.Deserialize<RecipeSteps>(content);
-            Console.WriteLine(recipeDetails);
-
-        @* trying some new things *@
-        var recipeSteps = JsonSerializer.Deserialize<List<SpoonacularRecipe>>(content);
-
-        recipe = recipeSteps.FirstOrDefault();
-        @* end trying some new things *@
-        
-
-        @* using var responseStream = await response.Content.ReadAsStreamAsync();
-        recipeSteps = await JsonSerializer.DeserializeAsync
-        <IEnumerable<RecipeSteps>>(responseStream);
-        Console.WriteLine(recipeSteps); *@
-    }
-    else
-    {
-        getResultsError = true;
-    }
-    shouldRender = true;
-}
-
-protected override bool ShouldRender() => shouldRender;
+        SPOONACULAR_API_KEY = DotNetEnv.Env.GetString("SPOONACULAR_API_KEY");
+        @* end get API key *@
     
-public class RecipeSteps 
-{
-    [JsonPropertyName("number")]
-    public int? Number { get; set; }
 
-    [JsonPropertyName("step")]
-    public string? Step { get; set; }
-}
+        var request1 = new HttpRequestMessage
+        {
+            Method = HttpMethod.Get,
+            RequestUri = new Uri($"https://api.spoonacular.com/recipes/{RecipeId}/analyzedInstructions"),
+            Headers = 
+            {
+                { "x-api-key", SPOONACULAR_API_KEY }
+            },
+        };
 
-@* trying some new things *@
-public class RecipeStep
-{
-    public int Number { get; set; }
-    public string Step { get; set; }
-}
+        var response1 = await HttpClient.SendAsync(request1);
 
-public class SpoonacularRecipe
-{
-    public string Name { get; set; }
-    public List<RecipeStep> Steps { get; set; }
-}
+        if (response1.IsSuccessStatusCode)
+        {
+            content = await response1.Content.ReadAsStringAsync();
+                Console.WriteLine("modified content:");
+                Console.WriteLine(content);
+                Console.WriteLine(content.Length);
+            string modifiedContent = content.Remove(content.Length - 3, 2).Substring(20);
+            Console.WriteLine("modified content:");
+            Console.WriteLine(modifiedContent);
+            
+            using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(modifiedContent)))
+            {
+                Steps = await JsonSerializer.DeserializeAsync<List<RecipeStep>>(memoryStream);
+            }
+
+            isLoading = false;
+
+        }
+        else
+        {
+            getResultsError = true;
+        }
+        
+    }
+
+    public class RecipeStep
+    {
+        @* [JsonPropertyName("number")]
+        public int? Number { get; set; } *@
+
+        [JsonPropertyName("step")]
+        public string? Step { get; set; }
+
+        @* public int Number { get; set; }
+        public string Step { get; set; } *@
+    }
+
+    public class RecipeStepsContainer
+    {
+        public string Name { get; set; }
+        public RecipeStep[] Steps { get; set; }
+    }
 
 }
