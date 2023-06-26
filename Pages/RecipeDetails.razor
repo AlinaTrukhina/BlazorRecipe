@@ -14,6 +14,18 @@
 }
 else
 {
+    <h4>@Recipe.Title</h4>
+    <img src="@Recipe.Image" alt="Recipe Image" />
+    <p>Servings: @Recipe.Servings</p>
+    <p>Ready in: @Recipe.MinutesReady minutes</p>
+    <h5>Ingredients:</h5>
+    <ul>
+        @foreach (var ingredient in Ingredients)
+        {
+            <li>@ingredient.Ingredient</li>
+        }
+    </ul>
+    <h5>Steps:</h5>
     <ol>
         @foreach (var step in Steps)
         {
@@ -31,9 +43,16 @@ else
     private bool isLoading = true;
 
     private List<RecipeStep> Steps { get; set; }
-
-    private string? content;
+    private string? content1;
     private string? modContent1;
+
+    private List<RecipeIngredient> Ingredients { get; set; }
+    private string? content3;
+    private string? modContent3;
+
+    private string? content2;
+    
+    public RecipeGeneralInfo Recipe { get; set; }
 
     private bool getResultsError;
     private bool shouldRender;
@@ -64,45 +83,91 @@ else
 
         if (response1.IsSuccessStatusCode)
         {
-            content = await response1.Content.ReadAsStringAsync();
-                Console.WriteLine("modified content:");
-                Console.WriteLine(content);
-                Console.WriteLine(content.Length);
-            string modifiedContent = content.Remove(content.Length - 3, 2).Substring(20);
-            Console.WriteLine("modified content:");
-            Console.WriteLine(modifiedContent);
+            content1 = await response1.Content.ReadAsStringAsync();
+            string modifiedContent = content1.Remove(content1.Length - 3, 2).Substring(20);
             
             using (var memoryStream = new MemoryStream(Encoding.UTF8.GetBytes(modifiedContent)))
             {
                 Steps = await JsonSerializer.DeserializeAsync<List<RecipeStep>>(memoryStream);
             }
+        }
+
+        var request2 = new HttpRequestMessage
+        {
+            Method = HttpMethod.Get,
+            RequestUri = new Uri($"https://api.spoonacular.com/recipes/{RecipeId}/information"),
+            Headers = 
+            {
+                { "x-api-key", SPOONACULAR_API_KEY }
+            },
+        };
+
+        var response2 = await HttpClient.SendAsync(request2);
+
+        if (response2.IsSuccessStatusCode)
+        {
+                content2 = await response2.Content.ReadAsStringAsync();
+
+                Recipe = JsonSerializer.Deserialize<RecipeGeneralInfo>(content2);
+
+                Ingredients = Recipe?.Ingredients;
 
             isLoading = false;
-
         }
         else
         {
             getResultsError = true;
-        }
-        
+        }   
     }
 
     public class RecipeStep
     {
-        @* [JsonPropertyName("number")]
-        public int? Number { get; set; } *@
 
         [JsonPropertyName("step")]
         public string? Step { get; set; }
 
-        @* public int Number { get; set; }
-        public string Step { get; set; } *@
     }
 
-    public class RecipeStepsContainer
+    public class RecipeIngredient
     {
-        public string Name { get; set; }
-        public RecipeStep[] Steps { get; set; }
+
+        [JsonPropertyName("original")]
+        public string? Ingredient { get; set; }
+
+    }
+
+
+    public class RecipeGeneralInfo
+    {
+        [JsonPropertyName("title")]
+        public string Title { get; set; }
+
+        [JsonPropertyName("image")]
+        public string Image { get; set; }
+
+        [JsonPropertyName("servings")]
+        public int Servings { get; set; }
+
+        [JsonPropertyName("readyInMinutes")]
+        public int? MinutesReady { get; set; }
+
+        [JsonPropertyName("vegetarian")]
+        public bool? Vegetarian { get; set; }
+
+        [JsonPropertyName("vegan")]
+        public bool? Vegan { get; set; }
+
+        [JsonPropertyName("glutenFree")]
+        public bool? GlutenFree { get; set; }
+
+        [JsonPropertyName("dairyFree")]
+        public bool? DairyFree { get; set; }
+
+        [JsonPropertyName("lowFodMap")]
+        public bool? LowFodMap { get; set; }
+
+        [JsonPropertyName("extendedIngredients")]
+        public List<RecipeIngredient> Ingredients { get; set; }
     }
 
 }
