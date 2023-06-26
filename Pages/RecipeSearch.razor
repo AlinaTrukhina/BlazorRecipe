@@ -1,4 +1,4 @@
-@page "/search-recipes"
+@page "/"
 @using System;
 @using System.IO;
 @using System.Linq
@@ -17,7 +17,7 @@
 <form action="" method="get" @onsubmit="SearchRecipes">
     <label for="searchTerm">Ingredient:</label>
     <input type="text" id="searchTerm" name="searchTerm" @bind-value="searchTerm" pattern="[a-zA-Z]+"/>
-    <button type="submit" @onclick="SearchRecipes">Search</button>
+    <button type="submit" @onclick="SearchRecipes" id="searchbutton" >Search</button>
 </form>
 
 @if ( searchTerm != null && recipes.Count() != 0 )
@@ -39,11 +39,12 @@
                 <tr>
                     <td>@item.Title</td>
                     <td><img src=@item.Image alt=@item.Title></td>
-                    <td><a href="recipe/@item.Id"><button>Details</button></a></td>
+                    <td><a href="recipe/@item.Id"><button class="detailsbutton">Details</button></a></td>
                 </tr>
             }
         </tbody>
     </table>
+
 }
 else if ( recipes.Count() == 0 )
 {

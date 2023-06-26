@@ -47,11 +47,8 @@ else
     private string? modContent1;
 
     private List<RecipeIngredient> Ingredients { get; set; }
-    private string? content3;
-    private string? modContent3;
 
     private string? content2;
-    
     public RecipeGeneralInfo Recipe { get; set; }
 
     private bool getResultsError;
@@ -140,10 +137,10 @@ else
     public class RecipeGeneralInfo
     {
         [JsonPropertyName("title")]
-        public string Title { get; set; }
+        public string? Title { get; set; }
 
         [JsonPropertyName("image")]
-        public string Image { get; set; }
+        public string? Image { get; set; }
 
         [JsonPropertyName("servings")]
         public int Servings { get; set; }
